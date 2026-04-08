@@ -1,0 +1,13 @@
+# Large geospatial data (keep locally; not suitable for GitHub)
+*.tif
+*.nc
+*.aux.xml
+
+# Office temp
+~$*
+
+# Presentation exports (large binaries; keep locally)
+powerpoint/
+
+# Optional: uncomment to exclude QGIS project
+# *.qgz
