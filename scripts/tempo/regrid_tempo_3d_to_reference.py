@@ -10,9 +10,9 @@ Outputs (72 bands each):
   - tempo_sup_scattering_weights_utm11_clipped.tif
   - tempo_sup_gas_profile_utm11_clipped.tif
 
-Usage:
-  py -3 regrid_tempo_3d_to_reference.py
-  py -3 regrid_tempo_3d_to_reference.py --max-points 80000 --seed 42
+Usage (defaults read/write under data/tempo/):
+  py -3 scripts/tempo/regrid_tempo_3d_to_reference.py
+  py -3 scripts/tempo/regrid_tempo_3d_to_reference.py --max-points 80000 --seed 42
 
 Requires: numpy, scipy, rasterio, pyproj, netCDF4
 """
@@ -31,6 +31,8 @@ from rasterio.transform import xy as transform_xy
 from scipy.interpolate import griddata
 from pyproj import Transformer
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_DATA_TEMPO = _REPO_ROOT / "data" / "tempo"
 
 VARS_DEFAULT = (
     ("support_data", "scattering_weights", "tempo_sup_scattering_weights_utm11_clipped.tif"),
@@ -95,9 +97,9 @@ def regrid_stack(
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Regrid TEMPO 3D NetCDF fields to reference grid.")
-    ap.add_argument("--nc", type=Path, default=Path(__file__).resolve().parent / "TEMPO_NO2_L2_V03_20250109T184504Z_S008G09.nc")
-    ap.add_argument("--reference", type=Path, default=Path(__file__).resolve().parent / "tempo_no2_utm11_clipped.tif")
-    ap.add_argument("--out-dir", type=Path, default=Path(__file__).resolve().parent)
+    ap.add_argument("--nc", type=Path, default=_DATA_TEMPO / "TEMPO_NO2_L2_V03_20250109T184504Z_S008G09.nc")
+    ap.add_argument("--reference", type=Path, default=_DATA_TEMPO / "tempo_no2_utm11_clipped.tif")
+    ap.add_argument("--out-dir", type=Path, default=_DATA_TEMPO)
     ap.add_argument("--max-points", type=int, default=50000, help="Max source points per layer (subsample for speed).")
     ap.add_argument("--seed", type=int, default=42, help="RNG seed for subsampling.")
     args = ap.parse_args()

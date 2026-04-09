@@ -8,14 +8,15 @@ REM 3D fields (131 x 2048 x 72): scattering_weights, gas_profile, temperature_pr
 REM are NOT warped here — gdalwarp -geoloc expects 2D rasters; use Python/xarray to
 REM regrid each vertical level to the same grid as tempo_vcd_troposphere_utm11_clipped.tif
 
-set "NC=C:\Users\aeaturu\Desktop\WORK April 2026\eaton\data\tempo\TEMPO_NO2_L2_V03_20250109T184504Z_S008G09.nc"
 set "TE=-te 232153.352299999998650 3634690.804000000003725 557208.806000000000331 3856746.122800000011921"
 set "TS=-ts 101 69"
 set "SRS=-t_srs EPSG:32611"
 set "GEO=-geoloc"
 set "ND=-srcnodata -1e+30 -dstnodata -1e+30"
 
-cd /d "%~dp0"
+for %%I in ("%~dp0..\..") do set "REPO=%%~fI"
+set "NC=%REPO%\data\tempo\TEMPO_NO2_L2_V03_20250109T184504Z_S008G09.nc"
+cd /d "%REPO%\data\tempo"
 
 echo --- QA / integer flags (near) ---
 call :near  "NETCDF:%NC%:/product/main_data_quality_flag"              tempo_qa_main_data_quality_flag_utm11_clipped.tif

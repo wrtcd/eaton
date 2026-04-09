@@ -8,9 +8,9 @@ Rules (defaults):
 
 Writes uint8 GeoTIFF: 1 = passes all rules, 0 = fails at least one.
 
-Usage (from this folder):
-  py -3 screen_tempo_pixels.py
-  py -3 screen_tempo_pixels.py --qa-main-max 1 --cloud-max 0.2
+Usage (defaults: GeoTIFFs in data/tempo/):
+  py -3 scripts/tempo/screen_tempo_pixels.py
+  py -3 scripts/tempo/screen_tempo_pixels.py --qa-main-max 1 --cloud-max 0.2
 
 Requires: numpy, rasterio
 """
@@ -30,6 +30,7 @@ except ImportError:
     print("Install rasterio: py -3 -m pip install rasterio", file=sys.stderr)
     sys.exit(1)
 
+_DATA_TEMPO = Path(__file__).resolve().parents[2] / "data" / "tempo"
 
 DEFAULT_QA = "tempo_qa_main_data_quality_flag_utm11_clipped.tif"
 DEFAULT_CLOUD = "tempo_sup_eff_cloud_fraction_utm11_clipped.tif"
@@ -64,7 +65,7 @@ def _vcd_valid(vcd: np.ndarray, nodata: float | None) -> np.ndarray:
 
 def main() -> int:
     p = argparse.ArgumentParser(description="Screen TEMPO pixels (QA, cloud, VCD nodata).")
-    p.add_argument("--dir", type=Path, default=Path(__file__).resolve().parent, help="GeoTIFF directory.")
+    p.add_argument("--dir", type=Path, default=_DATA_TEMPO, help="GeoTIFF directory.")
     p.add_argument("--reference", default=DEFAULT_REF, help="Raster to match CRS/shape/transform.")
     p.add_argument("--qa", default=DEFAULT_QA, help="main_data_quality_flag GeoTIFF.")
     p.add_argument("--cloud", default=DEFAULT_CLOUD, help="eff_cloud_fraction GeoTIFF.")

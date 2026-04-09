@@ -2,9 +2,9 @@
 Validate that all TEMPO 2D GeoTIFFs from warp_tempo_subdatasets_utm11_clipped.bat
 share the same grid as a reference raster (CRS, dimensions, geotransform).
 
-Usage (from this folder):
-  py -3 validate_tempo_stack.py
-  py -3 validate_tempo_stack.py --reference tempo_no2_utm11_clipped.tif
+Usage (defaults: GeoTIFFs in data/tempo/):
+  py -3 scripts/tempo/validate_tempo_stack.py
+  py -3 scripts/tempo/validate_tempo_stack.py --reference tempo_no2_utm11_clipped.tif
 
 Requires: rasterio
 """
@@ -22,6 +22,7 @@ except ImportError:
     print("Install rasterio: py -3 -m pip install rasterio", file=sys.stderr)
     sys.exit(1)
 
+_DATA_TEMPO = Path(__file__).resolve().parents[2] / "data" / "tempo"
 
 # Outputs produced by warp_tempo_subdatasets_utm11_clipped.bat (2D stack)
 EXPECTED = (
@@ -74,7 +75,7 @@ def main() -> int:
     p.add_argument(
         "--dir",
         type=Path,
-        default=Path(__file__).resolve().parent,
+        default=_DATA_TEMPO,
         help="Directory containing GeoTIFFs.",
     )
     args = p.parse_args()
