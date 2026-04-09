@@ -6,7 +6,7 @@ Southern California case study: PlanetScope imagery and TEMPO L2 NO₂ for smoke
 
 | Path | Contents |
 |------|----------|
-| **`data/aoi/`** | Study area box shapefile |
+| **`data/aoi/`** | AOI for tests: `circle` (+ `centroid`); methodology notes in `masscal.pdf`, `method.pdf` |
 | **`data/planet/metadata/`** | Planet scene metadata (JSON) |
 | **`data/planet/`** | Local Planet rasters (e.g. mosaics); not tracked |
 | **`data/tempo/`** | Local TEMPO NetCDF and warped GeoTIFFs; not tracked (folder kept via `.gitkeep`) |

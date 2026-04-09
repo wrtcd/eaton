@@ -11,3 +11,7 @@ powerpoint/
 
 # Optional: uncomment to exclude QGIS project
 # *.qgz
+
+# Python
+__pycache__/
+*.py[cod]
