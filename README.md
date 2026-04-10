@@ -16,7 +16,7 @@ Southern California case study: PlanetScope imagery and TEMPO L2 NO₂ for smoke
 ## Scripts (`scripts/tempo/`)
 
 - **`warp_tempo_subdatasets_utm11_clipped.bat`** — GDAL `gdalwarp` for selected TEMPO NetCDF subdatasets to a fixed UTM 11 grid (matches clipped study extent). Writes into **`data/tempo/`**.
-- **`regrid_tempo_3d_to_reference.py`** — Regrid 3D NetCDF fields to the same grid as a reference GeoTIFF.
+- **`regrid_tempo_3d_to_reference.py`** — Regrid 3D NetCDF fields (`scattering_weights`, `gas_profile`, `temperature_profile`; 72 bands each) to the same grid as a reference GeoTIFF.
 - **`screen_tempo_pixels.py`** — Build a QA/cloud/VCD validity mask.
 - **`validate_tempo_stack.py`** — Check that warped layers share one grid.
 
