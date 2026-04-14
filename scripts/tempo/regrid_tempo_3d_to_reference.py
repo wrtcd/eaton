@@ -11,7 +11,7 @@ Outputs (72 bands each):
   - tempo_sup_gas_profile_utm11_clipped.tif
   - tempo_sup_temperature_profile_utm11_clipped.tif
 
-Usage (defaults: NetCDF in data/tempo/; reference + 72-band outputs in step-by-step/03):
+Usage (defaults: NetCDF in data/tempo/; reference + 72-band outputs in step-by-step/03 tempo):
   py -3 scripts/tempo/regrid_tempo_3d_to_reference.py
   py -3 scripts/tempo/regrid_tempo_3d_to_reference.py --max-points 80000 --seed 42
 
@@ -34,7 +34,7 @@ from pyproj import Transformer
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DATA_TEMPO = _REPO_ROOT / "data" / "tempo"
-_STEP03 = _REPO_ROOT / "step-by-step" / "03"
+_STEP03 = _REPO_ROOT / "step-by-step" / "03 tempo"
 
 VARS_DEFAULT = (
     ("support_data", "scattering_weights", "tempo_sup_scattering_weights_utm11_clipped.tif"),
@@ -105,7 +105,7 @@ def main() -> int:
         "--reference",
         type=Path,
         default=_STEP03 / "tempo_vcd_troposphere_utm11_clipped.tif",
-        help="Reference GeoTIFF (grid to match). Default: step-by-step/03/tempo_vcd_troposphere_utm11_clipped.tif",
+        help="Reference GeoTIFF (grid to match). Default: step-by-step/03 tempo/tempo_vcd_troposphere_utm11_clipped.tif",
     )
     ap.add_argument("--out-dir", type=Path, default=_STEP03)
     ap.add_argument("--max-points", type=int, default=50000, help="Max source points per layer (subsample for speed).")

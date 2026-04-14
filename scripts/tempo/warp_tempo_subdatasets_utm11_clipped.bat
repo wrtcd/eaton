@@ -2,9 +2,9 @@
 setlocal
 REM If you run this file from cmd.exe, the path MUST be quoted when it contains spaces, e.g.:
 REM   "C:\Users\...\WORK April 2026\eaton\scripts\tempo\warp_tempo_subdatasets_utm11_clipped.bat"
-REM Or run step-by-step\03\run_warp_tempo.bat from the repo (no long path to type).
+REM Or run step-by-step\03 tempo\run_warp_tempo.bat from the repo (no long path to type).
 REM TEMPO NO2 L2: warp selected subdatasets to match tempo_no2_utm11_clipped.tif grid (EPSG:32611, 101x69).
-REM GeoTIFF outputs go to step-by-step\03 (edit OUTDIR below to change).
+REM GeoTIFF outputs go to step-by-step\03 tempo (edit OUTDIR below to change).
 REM QA/flags: -r near. Continuous: -r bilinear + nodata.
 REM Edit NC= if your granule filename differs.
 REM
@@ -20,7 +20,7 @@ set "ND=-srcnodata -1e+30 -dstnodata -1e+30"
 
 for %%I in ("%~dp0..\..") do set "REPO=%%~fI"
 set "NC=%REPO%\data\tempo\TEMPO_NO2_L2_V03_20250109T184504Z_S008G09.nc"
-set "OUTDIR=%REPO%\step-by-step\03"
+set "OUTDIR=%REPO%\step-by-step\03 tempo"
 if not exist "%OUTDIR%" mkdir "%OUTDIR%"
 
 echo --- QA / integer flags (near) ---

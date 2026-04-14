@@ -8,7 +8,7 @@ Rules (defaults):
 
 Writes uint8 GeoTIFF: 1 = passes all rules, 0 = fails at least one.
 
-Usage (defaults: inputs in step-by-step/03/, reference grid in data/tempo/):
+Usage (defaults: inputs in step-by-step/03 tempo/, reference = VCD on same grid):
   py -3 scripts/tempo/screen_tempo_pixels.py
   py -3 scripts/tempo/screen_tempo_pixels.py --qa-main-max 1 --cloud-max 0.2
 
@@ -32,12 +32,12 @@ except ImportError:
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DATA_TEMPO = _REPO_ROOT / "data" / "tempo"
-_STEP03 = _REPO_ROOT / "step-by-step" / "03"
+_STEP03 = _REPO_ROOT / "step-by-step" / "03 tempo"
 
 DEFAULT_QA = "tempo_qa_main_data_quality_flag_utm11_clipped.tif"
 DEFAULT_CLOUD = "tempo_sup_eff_cloud_fraction_utm11_clipped.tif"
 DEFAULT_VCD = "tempo_vcd_troposphere_utm11_clipped.tif"
-DEFAULT_REF = "tempo_no2_utm11_clipped.tif"
+DEFAULT_REF = "tempo_vcd_troposphere_utm11_clipped.tif"
 DEFAULT_OUT = "tempo_mask_screen_utm11_clipped.tif"
 
 
@@ -71,8 +71,8 @@ def main() -> int:
     p.add_argument(
         "--reference",
         type=Path,
-        default=_DATA_TEMPO / DEFAULT_REF,
-        help="Raster to match CRS/shape/transform (default: data/tempo reference).",
+        default=None,
+        help="Raster to match CRS/shape/transform (default: --dir / tempo_vcd_troposphere_utm11_clipped.tif).",
     )
     p.add_argument("--qa", default=DEFAULT_QA, help="main_data_quality_flag GeoTIFF.")
     p.add_argument("--cloud", default=DEFAULT_CLOUD, help="eff_cloud_fraction GeoTIFF.")
@@ -93,7 +93,10 @@ def main() -> int:
     args = p.parse_args()
     base = args.dir
 
-    ref_path = args.reference if args.reference.is_absolute() else (base / args.reference)
+    if args.reference is None:
+        ref_path = base / DEFAULT_REF
+    else:
+        ref_path = args.reference if args.reference.is_absolute() else (base / args.reference)
     qa_path = base / args.qa
     cloud_path = base / args.cloud
     vcd_path = base / args.vcd

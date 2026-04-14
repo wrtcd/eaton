@@ -19,9 +19,9 @@ Usage (defaults match eaton layout):
   py -3 scripts/fp_planet_mask_to_tempo.py
   py -3 scripts/fp_planet_mask_to_tempo.py --mask data/aoi/mask.shp \\
       --planet-ref data/planet/20250109_184929_70_24bd_3B_AnalyticMS_SR_8b.tif \\
-      --tempo-ref "step-by-step/03/tempo_vcd_troposphere_utm11_clipped.tif"
+      --tempo-ref "step-by-step/03 tempo/tempo_vcd_troposphere_utm11_clipped.tif"
 
-Requires: numpy, rasterio, fiona
+Requires: numpy, rasterio, and for vector masks either **pyogrio** (+ shapely/geopandas, typical on Py3.14) or **fiona**.
 """
 
 from __future__ import annotations
@@ -42,20 +42,45 @@ except ImportError as e:
     raise SystemExit(1) from e
 
 try:
+    import pyogrio
+except ImportError:
+    pyogrio = None
+try:
     import fiona
-except ImportError as e:
-    print("Install fiona (for vector mask): py -3 -m pip install fiona", file=sys.stderr)
-    raise SystemExit(1) from e
+except ImportError:
+    fiona = None
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_DEFAULT_STEP03 = _REPO_ROOT / "step-by-step" / "03"
+_DEFAULT_STEP03 = _REPO_ROOT / "step-by-step" / "03 tempo"
+_DEFAULT_STEP04 = _REPO_ROOT / "step-by-step" / "04 plume fraction"
 _DEFAULT_MASK = _REPO_ROOT / "data" / "aoi" / "mask.shp"
 _DEFAULT_TEMPO = _DEFAULT_STEP03 / "tempo_vcd_troposphere_utm11_clipped.tif"
-_DEFAULT_OUT = _DEFAULT_STEP03 / "tempo_fp_plume_utm11_clipped.tif"
+_DEFAULT_OUT = _DEFAULT_STEP04 / "tempo_fp_plume_utm11_clipped.tif"
+_DEFAULT_TEMPO_SCREEN = _DEFAULT_STEP03 / "tempo_mask_screen_utm11_clipped.tif"
+_FP_SCREEN_NODATA = -9999.0
 
 
-def _rasterize_vector_to_planet(mask_path: Path, planet) -> np.ndarray:
-    """Binary mask on planet grid (uint8 0/1)."""
+def _vector_shapes_pyogrio(mask_path: Path, planet) -> list:
+    """GeoJSON geometries for rasterize, reprojected to planet CRS."""
+    from shapely.geometry import mapping
+
+    shapes: list = []
+    gdf = pyogrio.read_dataframe(mask_path)
+    crs = gdf.crs
+    src_crs = CRS.from_epsg(4326) if crs is None else CRS.from_user_input(crs)
+    for geom in gdf.geometry:
+        if geom is None:
+            continue
+        if getattr(geom, "is_empty", False):
+            continue
+        g = mapping(geom)
+        if src_crs != planet.crs:
+            g = transform_geom(src_crs, planet.crs, g)
+        shapes.append((g, 1))
+    return shapes
+
+
+def _vector_shapes_fiona(mask_path: Path, planet) -> list:
     shapes: list = []
     with fiona.open(mask_path) as src:
         src_crs = CRS.from_user_input(src.crs or "EPSG:4326")
@@ -66,9 +91,28 @@ def _rasterize_vector_to_planet(mask_path: Path, planet) -> np.ndarray:
             if src_crs != planet.crs:
                 geom = transform_geom(src_crs, planet.crs, geom)
             shapes.append((geom, 1))
+    return shapes
 
+
+def _rasterize_vector_to_planet(mask_path: Path, planet) -> np.ndarray:
+    """Binary mask on planet grid (uint8 0/1)."""
+    shapes: list = []
+    if pyogrio is not None:
+        try:
+            shapes = _vector_shapes_pyogrio(mask_path, planet)
+        except Exception:
+            shapes = []
+    if not shapes and fiona is not None:
+        shapes = _vector_shapes_fiona(mask_path, planet)
+    if not shapes and pyogrio is None and fiona is None:
+        print(
+            "ERROR: vector mask needs pyogrio or fiona. "
+            "Try: py -3 -m pip install pyogrio shapely",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
     if not shapes:
-        raise SystemExit(f"No features in {mask_path}")
+        raise SystemExit(f"No features in {mask_path} (or failed to read with pyogrio/fiona)")
 
     out = rasterize(
         shapes,
@@ -138,6 +182,17 @@ def main() -> int:
     )
     ap.add_argument("--tempo-ref", type=Path, default=_DEFAULT_TEMPO, help="TEMPO reference GeoTIFF (output grid).")
     ap.add_argument("-o", "--output", type=Path, default=_DEFAULT_OUT, help="Output f_p GeoTIFF (float32).")
+    ap.add_argument(
+        "--tempo-screen-mask",
+        type=Path,
+        default=None,
+        help=f"uint8 QA/cloud/VCD screen (1=keep). Default: {_DEFAULT_TEMPO_SCREEN} if present.",
+    )
+    ap.add_argument(
+        "--no-tempo-screen",
+        action="store_true",
+        help="Do not apply TEMPO QA/cloud screen mask.",
+    )
     args = ap.parse_args()
 
     case_planet = _REPO_ROOT / "data" / "case.json"
@@ -150,7 +205,9 @@ def main() -> int:
                 case = json.load(f)
             rel = case.get("planet")
             if rel:
-                planet_path = _REPO_ROOT / "data" / rel
+                p_data = _REPO_ROOT / "data" / rel
+                p_repo = _REPO_ROOT / rel
+                planet_path = p_data if p_data.is_file() else p_repo
         if planet_path is None:
             print("ERROR: pass --planet-ref or set planet in data/case.json", file=sys.stderr)
             return 1
@@ -175,12 +232,36 @@ def main() -> int:
         mask_p = _mask_on_planet_grid(args.mask, planet)
         fp = _average_to_tempo(mask_p, planet, tempo)
 
+        screen_path: Path | None = None
+        if not args.no_tempo_screen:
+            cand = args.tempo_screen_mask or _DEFAULT_TEMPO_SCREEN
+            if cand.is_file():
+                screen_path = cand
+
+        nodata_out: float | None = None
+        if screen_path is not None:
+            with rasterio.open(screen_path) as sm:
+                if sm.width != tempo.width or sm.height != tempo.height:
+                    print(
+                        f"ERROR: tempo screen mask grid {sm.width}x{sm.height} != tempo ref {tempo.width}x{tempo.height}",
+                        file=sys.stderr,
+                    )
+                    return 1
+                if sm.crs != tempo.crs:
+                    print("ERROR: tempo screen mask CRS mismatch vs tempo reference.", file=sys.stderr)
+                    return 1
+                scr = sm.read(1)
+            m = scr > 0
+            fp = np.where(m, fp, _FP_SCREEN_NODATA).astype(np.float32)
+            nodata_out = _FP_SCREEN_NODATA
+            print(f"Applied TEMPO QA/cloud screen: {screen_path.name} (failed pixels -> nodata {_FP_SCREEN_NODATA})")
+
         profile = tempo.profile.copy()
         profile.update(
             driver="GTiff",
             count=1,
             dtype="float32",
-            nodata=None,
+            nodata=nodata_out,
             compress="deflate",
         )
         tw, th = tempo.width, tempo.height
@@ -189,7 +270,7 @@ def main() -> int:
         with rasterio.open(out_path, "w", **profile) as dst:
             dst.write(fp, 1)
 
-    n_valid = int(np.sum(np.isfinite(fp) & (fp > 0)))
+    n_valid = int(np.sum(np.isfinite(fp) & (fp > 0) & (fp != _FP_SCREEN_NODATA)))
     print(f"Wrote {out_path}")
     print(f"  TEMPO grid: {tw}x{th}  CRS={tcrs}")
     print(f"  Planet grid: {pw}x{ph}  (mask aggregated with average resampling)")

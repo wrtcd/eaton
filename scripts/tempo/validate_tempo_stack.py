@@ -2,7 +2,7 @@
 Validate that TEMPO GeoTIFFs (warped 2D layers + optional regridded 3D stacks)
 share the same grid as a reference raster (CRS, dimensions, geotransform).
 
-Usage (defaults: GeoTIFFs in step-by-step/03/, reference: VCD troposphere there):
+Usage (defaults: GeoTIFFs in step-by-step/03 tempo/, reference: VCD troposphere there):
   py -3 scripts/tempo/validate_tempo_stack.py
   py -3 scripts/tempo/validate_tempo_stack.py --dir data/tempo --reference tempo_vcd_troposphere_utm11_clipped.tif
 
@@ -23,7 +23,7 @@ except ImportError:
     sys.exit(1)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_STEP03 = _REPO_ROOT / "step-by-step" / "03"
+_STEP03 = _REPO_ROOT / "step-by-step" / "03 tempo"
 
 # warp_tempo_subdatasets_utm11_clipped.bat (2D) + regrid_tempo_3d_to_reference.py (72 bands each)
 EXPECTED = (
@@ -77,13 +77,13 @@ def main() -> int:
         "--reference",
         type=Path,
         default=_STEP03 / "tempo_vcd_troposphere_utm11_clipped.tif",
-        help="Reference GeoTIFF (grid to match). Default: step-by-step/03/tempo_vcd_troposphere_utm11_clipped.tif",
+        help="Reference GeoTIFF (grid to match). Default: step-by-step/03 tempo/tempo_vcd_troposphere_utm11_clipped.tif",
     )
     p.add_argument(
         "--dir",
         type=Path,
         default=_STEP03,
-        help="Directory containing warped GeoTIFFs (default: step-by-step/03).",
+        help="Directory containing warped GeoTIFFs (default: step-by-step/03 tempo).",
     )
     args = p.parse_args()
 

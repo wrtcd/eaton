@@ -1,0 +1,8 @@
+{
+  "vcd_bg_molecules_cm2": 9913848060444672.0,
+  "vcd_bg_method": "median where f_p <= 1e-06",
+  "fp_eps": 1e-06,
+  "fp_low_fallback": 0.05,
+  "vcd_adj_path": "C:/Users/aeaturu/Desktop/WORK April 2026/eaton/step-by-step/06 vcd check/tempo_vcd_check_scd_over_amf_trop.tif",
+  "fp_path": "C:/Users/aeaturu/Desktop/WORK April 2026/eaton/step-by-step/04 plume fraction/tempo_fp_plume_utm11_clipped.tif"
+}
