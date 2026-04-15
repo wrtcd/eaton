@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="920" viewBox="0 0 1920 920" role="img" aria-labelledby="title desc">
   <title id="title">Troposphere: slant path and tropospheric column</title>
-  <desc id="desc">Satellite slant path through troposphere; vertical column is VCD (tropospheric column).</desc>
+  <desc id="desc">The slant path is the diagonal satellite line of sight (cyan). The tropospheric column is the vertical integral (purple arrow), not the slant.</desc>
 
   <defs>
     <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -16,9 +16,10 @@
       <stop offset="0%" stop-color="#B0DDF5"/>
       <stop offset="100%" stop-color="#FFF6E0"/>
     </linearGradient>
+    <!-- Slant path: diagonal satellite LOS (cyan / light blue) -->
     <linearGradient id="beam" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#8ECFFF" stop-opacity="0.45"/>
-      <stop offset="100%" stop-color="#C8E8FF" stop-opacity="0.2"/>
+      <stop offset="0%" stop-color="#4DD0E1" stop-opacity="0.62"/>
+      <stop offset="100%" stop-color="#B2EBF2" stop-opacity="0.38"/>
     </linearGradient>
     <filter id="cardShadow" x="-1%" y="-1%" width="102%" height="104%">
       <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1A3048" flood-opacity="0.15"/>
@@ -50,8 +51,8 @@
     <rect x="120" y="100" width="1680" height="620" rx="4" ry="4" fill="url(#tropFill)" stroke="#1a1a1a" stroke-width="2.5"/>
   </g>
 
-  <!-- Slant path: diagonal from satellite toward ground (not horizontal) -->
-  <polygon points="95,75 720,695 820,655 130,95" fill="url(#beam)" stroke="none"/>
+  <!-- Slant path: diagonal from satellite toward ground (NOT the vertical column) -->
+  <polygon points="95,75 720,695 820,655 130,95" fill="url(#beam)" stroke="#00ACC1" stroke-width="2.8" stroke-opacity="0.95"/>
 
   <!-- Satellite -->
   <g transform="translate(58,40)">
@@ -75,19 +76,19 @@
 
   <!-- Left bracket + slant path label -->
   <path d="M 148 175 Q 128 175 128 195 L 128 320 Q 118 360 128 400 L 128 520 Q 118 560 128 600 L 128 680 Q 128 700 148 700"
-        fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/>
-  <text x="168" y="360" font-family="Segoe UI, Arial, sans-serif" font-size="20" fill="#111">
+        fill="none" stroke="#00838F" stroke-width="2.4" stroke-linecap="round"/>
+  <text x="168" y="360" font-family="Segoe UI, Arial, sans-serif" font-size="20" fill="#006064">
     <tspan x="168" dy="0">Slant path</tspan>
     <tspan x="168" dy="24">(what the instrument senses)</tspan>
   </text>
 
-  <!-- VCD: vertical double arrow on the RIGHT (tropospheric column) -->
-  <g id="vcd-arrow" stroke="#1a1a1a" stroke-width="3" fill="#1a1a1a">
+  <!-- Tropospheric column: vertical path (NOT the slant) — distinct purple -->
+  <g id="vcd-arrow" stroke="#6A1B9A" stroke-width="3.2" fill="#6A1B9A">
     <line x1="1588" y1="155" x2="1588" y2="665"/>
     <polygon points="1588,145 1578,165 1598,165"/>
     <polygon points="1588,675 1578,655 1598,655"/>
   </g>
-  <text x="1605" y="435" font-family="Segoe UI, Arial, sans-serif" font-size="19" fill="#111">Tropospheric column (NO&#x2082;)</text>
+  <text x="1605" y="435" font-family="Segoe UI, Arial, sans-serif" font-size="19" fill="#4A148C">Tropospheric column (NO&#x2082;)</text>
 
   <!-- AMF callout -->
   <g>
