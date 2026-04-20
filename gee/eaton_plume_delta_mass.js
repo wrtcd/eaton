@@ -12,8 +12,10 @@
  *
  * SET YOUR ASSET IDS BELOW, then paste this entire file into the Code Editor and Run.
  *
- * Total NO₂ kg: sum via sampleRectangle + ee.Array (native pixels), not reduceRegion sum.
- * VCD_bg fallback is 0 if all median branches fail. Optional crsTransform for zonal stats only.
+ * Total NO₂ kg: reproject to EATON_GEOTRANSFORM, then reduceRegion.sum + crsTransform; if sum is 0,
+ * fallback sum @ projection+nominalScale ÷ 65536 (EE resampling quirk). Paste gdalinfo GeoTransform
+ * on your uploaded file into EATON_GEOTRANSFORM so the native sum path matches and fallback is unused.
+ * VCD_bg fallback is 0 if all median branches fail.
  *
  * Map shift (plumes offset vs basemap / mountains): Each layer is drawn using only the
  * GeoTIFF’s CRS and affine transform. Earth Engine does not invent placement beyond that
@@ -33,8 +35,8 @@
  * Do **not** use ee.Image.reproject() in this script to “nudge” the map: that resamples
  * pixels and invalidates the native-pixel mass sum. Match Python by fixing the GeoTIFF.
  *
- * Paste `gdalinfo` affine into EATON_GEOTRANSFORM below; set CONFIG.crsTransform when
- * reducers must use that exact grid (see comments on CONFIG.crsTransform).
+ * Paste `gdalinfo` affine into EATON_GEOTRANSFORM for reference. Set CONFIG.crsTransform to
+ * that array only after verifying it matches the ingested asset; otherwise leave null.
  */
 
 // --- user configuration ----------------------------------------------------
@@ -55,6 +57,21 @@ var EATON_GEOTRANSFORM = [
   0,
   -(3856746.1228 - 3634690.804) / 69,
 ];
+
+/** Pixel grid (must match uploaded GeoTIFF). sampleRectangle needs this exact UTM rectangle — vcd.geometry().bounds() can misalign and return all zeros. */
+var EATON_GRID_W = 101;
+var EATON_GRID_H = 69;
+var _gt0 = EATON_GEOTRANSFORM[0];
+var _gt1 = EATON_GEOTRANSFORM[1];
+var _gt3 = EATON_GEOTRANSFORM[3];
+var _gt5 = EATON_GEOTRANSFORM[5];
+var EATON_XMAX = _gt0 + EATON_GRID_W * _gt1;
+var EATON_YMIN = _gt3 + EATON_GRID_H * _gt5;
+var SAMPLE_RECT_BBOX = ee.Geometry.Rectangle(
+  [_gt0, EATON_YMIN, EATON_XMAX, _gt3],
+  'EPSG:32611',
+  false
+);
 
 var CONFIG = {
   /** VCD_adj — step 06 (SCD/AMF_trop); used for ΔVCD & mass. */
@@ -80,7 +97,9 @@ var CONFIG = {
   fpEps: 1e-6,
   fpLow: 0.05,
 
-  /** Medians / stats / charts: ~match printed VCD nominalScale (m). */
+  /**
+   * Histogram / chart resampling (m). Reducers use crsTransform when set, else proj.nominalScale().
+   */
   scaleM: 3220,
 
   /**
@@ -89,7 +108,9 @@ var CONFIG = {
   pixelAreaM2: 10357338.55632546,
 
   /**
-   * Set to EATON_GEOTRANSFORM only if that grid matches your GEE asset (see file header). Else null.
+   * Optional: set to EATON_GEOTRANSFORM only if those six numbers match the GEE asset *exactly*
+   * (same gdalinfo GeoTransform as ingested). If they differ even slightly, reduceRegion returns
+   * no samples → VCD_bg "failed", mass 0. Default null = use proj.nominalScale() (matches Python).
    */
   crsTransform: null,
 
@@ -160,7 +181,12 @@ function _useCrsTransform() {
   );
 }
 
-/** Medians, counts, stats — crs+scale; optional crsTransform if set and matches asset. */
+/**
+ * Medians, counts, stats, and mass sums.
+ * Prefer crsTransform (native affine). Otherwise use crs: img.projection() + nominalScale —
+ * NOT crs: 'EPSG:32611' + scale alone: that reprojects onto a new grid and can duplicate
+ * pixels in Reducer.sum() (~10^4–10^5× mass inflation vs Python).
+ */
 function reduceRegionCustom(img, reducer, geometry) {
   if (_useCrsTransform()) {
     return img.reduceRegion({
@@ -172,29 +198,15 @@ function reduceRegionCustom(img, reducer, geometry) {
       tileScale: 4,
     });
   }
+  var ip = img.projection();
   return img.reduceRegion({
     reducer: reducer,
     geometry: geometry,
-    crs: 'EPSG:32611',
-    scale: scaleAnalysis,
+    crs: ip,
+    scale: ip.nominalScale(),
     maxPixels: CONFIG.maxPixels,
     tileScale: 4,
   });
-}
-
-/**
- * Total kg by summing native-resolution pixels (no reduceRegion reprojection path).
- * reduceRegion(..., Reducer.sum()) still resamples first; extensive per-pixel kg then sums wrong (~1e5×).
- * sampleRectangle → ee.Array; sum via reduce(..., [0, 1]) (flatten/matrixToVector not on JS ee.Array).
- */
-function sumMassKgNative(imgUnmaskedOrMasked) {
-  var bbox = analysisRegion.bounds(1, proj);
-  var rect = imgUnmaskedOrMasked.unmask(0).sampleRectangle({
-    region: bbox,
-    defaultValue: 0,
-  });
-  var arr = ee.Array(rect.get('mass_kg'));
-  return arr.reduce(ee.Reducer.sum(), [0, 1]).get([0, 0]);
 }
 
 // --- VCD_bg: same decision tree as delta_vcd_plume._vcd_background ------------
@@ -248,10 +260,14 @@ var vcdBgMethod = ee.String(
 
 // --- ΔVCD and ΔVCD_plume = f_p * ΔVCD --------------------------------------
 
-var delta = vcd.subtract(vcdBg).updateMask(vcdFinite);
+var deltaRaw = vcd.subtract(vcdBg);
+var delta = deltaRaw.updateMask(vcdFinite);
 var deltaPlume = fp.multiply(delta).updateMask(maskValid).rename('dplume');
 
 /** Match Python: screened f_p pixels should not contribute (already excluded from maskValid) */
+
+// Unmasked plume column for mass totals (zeros where invalid) — matches Python finite mask
+var deltaPlumeUnmasked = fp.multiply(deltaRaw).multiply(maskValid.toFloat()).rename('dplume');
 
 // --- Mass (kg) per pixel — mass_no2_from_plume ------------------------------
 //
@@ -264,11 +280,60 @@ var m2PerPx =
   CONFIG.pixelAreaM2 !== null && CONFIG.pixelAreaM2 > 0
     ? ee.Number(CONFIG.pixelAreaM2)
     : ns.multiply(ns);
+// Constant pixel area on every cell (Python: abs(a·e) per pixel). Do not leave area masked from
+// deltaPlume — masked area × unmasked ΔVCD_plume zeros yields masked mass → sampleRectangle sum 0.
 var areaM2 = deltaPlume.multiply(0).add(m2PerPx).rename('area_m2');
-var areaCm2 = areaM2.multiply(1e4);
+var cm2PerPx = m2PerPx.multiply(1e4);
+var areaCm2 = areaM2.multiply(1e4).unmask(cm2PerPx);
 var massKg = deltaPlume.multiply(areaCm2).divide(N_A).multiply(M_NO2).rename('mass_kg');
+/** Same formula on unmasked ΔVCD_plume (invalid pixels = 0) — for native-pixel sum only */
+var massKgForSum = deltaPlumeUnmasked
+  .multiply(areaCm2)
+  .divide(N_A)
+  .multiply(M_NO2)
+  .unmask(0)
+  .rename('mass_kg');
 
 // --- zonal / summary stats -------------------------------------------------
+
+/**
+ * Mass total on the 101×69 grid. Prefer reproject → crsTransform sum (matches affine).
+ * If that is 0 (ingested GeoTransform ≠ EATON_GEOTRANSFORM), fall back to projection+scale sum
+ * ÷ 65536 — observed EE inflation when scale does not match native pixels (~256² subcells).
+ */
+function sumMassKgOnNativeGrid(imgUnmaskedMass) {
+  var img = imgUnmaskedMass.unmask(0).rename('mass_kg');
+  var onGrid = img.reproject({
+    crs: 'EPSG:32611',
+    crsTransform: EATON_GEOTRANSFORM,
+  });
+  var sumNative = ee.Number(
+    onGrid
+      .reduceRegion({
+        reducer: ee.Reducer.sum(),
+        geometry: SAMPLE_RECT_BBOX,
+        crs: 'EPSG:32611',
+        crsTransform: EATON_GEOTRANSFORM,
+        maxPixels: CONFIG.maxPixels,
+        tileScale: 4,
+      })
+      .get('mass_kg')
+  );
+  var sumInflated = ee.Number(
+    img.reduceRegion({
+      reducer: ee.Reducer.sum(),
+      geometry: SAMPLE_RECT_BBOX,
+      crs: proj,
+      scale: proj.nominalScale(),
+      maxPixels: CONFIG.maxPixels,
+      tileScale: 4,
+    }).get('mass_kg')
+  );
+  var inflationFactor = 65536;
+  return ee.Number(
+    ee.Algorithms.If(sumNative.gt(0), sumNative, sumInflated.divide(inflationFactor))
+  );
+}
 
 function imageStats(img) {
   return reduceRegionCustom(
@@ -281,10 +346,11 @@ function imageStats(img) {
   );
 }
 
-var totalKgAllPixels = sumMassKgNative(massKg);
+var totalKgAllPixels = sumMassKgOnNativeGrid(massKgForSum);
 
 var posMask = massKg.gt(0);
-var totalKgPositiveOnly = sumMassKgNative(massKg.updateMask(posMask));
+var massKgPositiveOnly = massKgForSum.multiply(massKgForSum.gt(0).toFloat()).rename('mass_kg');
+var totalKgPositiveOnly = sumMassKgOnNativeGrid(massKgPositiveOnly);
 
 var negMask = massKg.lt(0).and(massKg.mask());
 var nPos = reduceRegionCustom(massKg.updateMask(posMask), ee.Reducer.count(), analysisRegion);
@@ -302,11 +368,11 @@ print('m² per pixel used for mass (Python: abs(a·e); here nominalScale² or CO
 print(
   'Zonal stats:',
   _useCrsTransform()
-    ? 'crsTransform for reduceRegion (optional)'
-    : 'reduceRegion @ scale ' + scaleAnalysis + ' m (medians, counts, imageStats)'
+    ? 'reduceRegion + crsTransform (must match asset exactly)'
+    : 'reduceRegion @ crs: image.projection() + nominalScale (avoid EPSG string + scale)'
 );
 print(
-  'Total NO₂ kg uses sampleRectangle + sum(native pixels) — not reduceRegion sum (avoids ~1e5× bug).'
+  'Total NO₂ kg: native crsTransform sum if >0; else inflated sum ÷ 65536 (see sumMassKgOnNativeGrid).'
 );
 
 print('VCD_bg (molecules/cm²)', vcdBg);
