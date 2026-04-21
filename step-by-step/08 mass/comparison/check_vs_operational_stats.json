@@ -1,0 +1,20 @@
+{
+  "delta_valid_check": 4504,
+  "delta_valid_operational": 4565,
+  "delta_valid_both": 4504,
+  "delta_plume_pixels_both": 152,
+  "mass_valid_check": 4504,
+  "mass_valid_operational": 4565,
+  "mass_valid_both": 4504,
+  "total_mass_kg_check": 30251.296350367367,
+  "total_mass_kg_operational": 28355.844008393586,
+  "total_mass_kg_difference_op_minus_check": -1895.4523419737816,
+  "fractional_difference": -0.06265689641927571,
+  "rmse_delta_molecules_cm2_all_valid_pixels": 668071108189477.8,
+  "rmse_delta_molecules_cm2_plume_subset_abs_sum_gt_1e12": 3636638124707184.5,
+  "median_abs_delta_diff_molecules_cm2": 0.0,
+  "rmse_mass_kg": 5.286031466261565,
+  "median_abs_mass_diff_kg": 0.0,
+  "mean_delta_difference_op_minus_check_molecules_cm2": -53187235525299.16,
+  "mean_mass_difference_op_minus_check_kg": -0.4208375537241966
+}

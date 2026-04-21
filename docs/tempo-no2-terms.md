@@ -1,6 +1,6 @@
 # TEMPO NO₂ — short glossary (ATBD-aligned, this repo)
 
-For typeset fractions and subscripts in a browser, use **`docs/tempo-no2-terms.html`**.
+For the same glossary with Unicode subscripts (no HTML math), see **`docs/tempo-no2-terms-unicode.md`**.
 
 Layer index **k** = 72 `swt_level` bins; **trop** = layers between tropopause and surface in hybrid pressure.
 

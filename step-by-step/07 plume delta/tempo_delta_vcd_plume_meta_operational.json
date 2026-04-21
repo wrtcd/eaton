@@ -1,0 +1,11 @@
+{
+  "vcd_bg_molecules_cm2": 2384224258304224.0,
+  "vcd_bg_method": "median where f_p <= 1e-06",
+  "fp_eps": 1e-06,
+  "fp_low_fallback": 0.05,
+  "vcd_source": "operational_troposphere",
+  "vcd_path": "C:/Users/aeaturu/Desktop/WORK April 2026/eaton/step-by-step/03 tempo/tempo_vcd_troposphere_utm11_clipped.tif",
+  "fp_path": "C:/Users/aeaturu/Desktop/WORK April 2026/eaton/step-by-step/04 plume fraction/tempo_fp_plume_utm11_clipped.tif",
+  "screen_applied": true,
+  "screen_path": "C:/Users/aeaturu/Desktop/WORK April 2026/eaton/step-by-step/03 tempo/tempo_mask_screen_utm11_clipped.tif"
+}

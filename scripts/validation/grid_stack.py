@@ -1,7 +1,7 @@
 """
 Shared helpers: compare GeoTIFFs to a reference grid (CRS, shape, affine).
 
-Used by scripts/validation/validate_*_stack.py and scripts/tempo/validate_tempo_stack.py.
+Used by scripts/tempo/validate_tempo_stack.py (and optional column tools under scripts/validation/).
 
 Requires: rasterio
 """

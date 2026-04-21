@@ -1,1 +1,1 @@
-"""NO₂ satellite stack validation (grid alignment) and column comparison helpers."""
+"""Grid alignment helpers for warped GeoTIFF stacks; see grid_stack.py."""

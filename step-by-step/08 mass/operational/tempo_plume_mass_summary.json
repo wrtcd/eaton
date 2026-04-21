@@ -1,0 +1,21 @@
+{
+  "delta_vcd_plume_path": "C:\\Users\\aeaturu\\Desktop\\WORK April 2026\\eaton\\step-by-step\\07 plume delta\\tempo_delta_vcd_plume_operational.tif",
+  "vcd_column_basis": "operational_troposphere",
+  "pixel_area_m2": 10357338.55632546,
+  "crs": "EPSG:32611",
+  "width": 101,
+  "height": 69,
+  "bounds": {
+    "left": 232153.3523,
+    "bottom": 3634690.804,
+    "right": 557208.806,
+    "top": 3856746.1228
+  },
+  "n_valid_delta_pixels": 4565,
+  "n_positive_mass_pixels": 152,
+  "n_negative_mass_pixels": 0,
+  "total_no2_mass_kg_sum_all_pixels": 28355.84405158679,
+  "total_no2_mass_kg_sum_positive_only": 28355.84405158679,
+  "molar_mass_no2_kg_per_mol": 0.0460055,
+  "avogadro": 6.02214076e+23
+}
