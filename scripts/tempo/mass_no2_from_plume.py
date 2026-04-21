@@ -40,7 +40,9 @@ except ImportError:
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_DVCD = _REPO_ROOT / "step-by-step" / "07 plume delta" / "tempo_delta_vcd_plume.tif"
+_DEFAULT_DVCD_OPERATIONAL = _REPO_ROOT / "step-by-step" / "07 plume delta" / "tempo_delta_vcd_plume_operational.tif"
 _DEFAULT_OUT_DIR = _REPO_ROOT / "step-by-step" / "08 mass"
+_DEFAULT_OUT_OPERATIONAL = _REPO_ROOT / "step-by-step" / "08 mass" / "operational"
 N_A = 6.02214076e23  # Avogadro (mol^-1)
 M_NO2_KG_PER_MOL = 46.0055e-3  # kg/mol
 NODATA_IN = -1.0e30
@@ -54,20 +56,37 @@ def _pixel_area_m2(transform) -> float:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="NO2 mass from delta_VCD_plume column.")
-    ap.add_argument("--delta-plume", type=Path, default=_DEFAULT_DVCD, help="ΔVCD_plume GeoTIFF (molecules/cm²).")
-    ap.add_argument("--out-dir", type=Path, default=_DEFAULT_OUT_DIR)
+    ap.add_argument(
+        "--operational-vcd",
+        action="store_true",
+        help="Use ΔVCD_plume from operational tropospheric VCD (tempo_delta_vcd_plume_operational.tif); "
+        "writes under step-by-step/08 mass/operational/ unless --out-dir is set.",
+    )
+    ap.add_argument("--delta-plume", type=Path, default=None, help="ΔVCD_plume GeoTIFF (molecules/cm²).")
+    ap.add_argument("--out-dir", type=Path, default=None)
     ap.add_argument("--dpi", type=int, default=150)
     args = ap.parse_args()
 
-    if not args.delta_plume.is_file():
-        print(f"ERROR: not found: {args.delta_plume}", file=sys.stderr)
+    if args.operational_vcd:
+        delta_path = _DEFAULT_DVCD_OPERATIONAL
+        out_dir = args.out_dir if args.out_dir is not None else _DEFAULT_OUT_OPERATIONAL
+    elif args.delta_plume is not None:
+        delta_path = args.delta_plume
+        out_dir = args.out_dir if args.out_dir is not None else _DEFAULT_OUT_DIR
+    else:
+        delta_path = _DEFAULT_DVCD
+        out_dir = args.out_dir if args.out_dir is not None else _DEFAULT_OUT_DIR
+
+    if not delta_path.is_file():
+        print(f"ERROR: not found: {delta_path}", file=sys.stderr)
         return 1
 
+    args.out_dir = out_dir
     args.out_dir.mkdir(parents=True, exist_ok=True)
     fig_dir = args.out_dir / "figures"
     fig_dir.mkdir(parents=True, exist_ok=True)
 
-    with rasterio.open(args.delta_plume) as ds:
+    with rasterio.open(delta_path) as ds:
         dvcd = ds.read(1).astype(np.float64)
         nodata = ds.nodata
         tr = ds.transform
@@ -97,7 +116,8 @@ def main() -> int:
     n_valid = int(np.sum(ok))
 
     summary = {
-        "delta_vcd_plume_path": str(args.delta_plume.resolve()),
+        "delta_vcd_plume_path": str(delta_path.resolve()),
+        "vcd_column_basis": "operational_troposphere" if args.operational_vcd else "default_delta_plume_input",
         "pixel_area_m2": area_m2,
         "crs": str(crs) if crs else None,
         "width": w,

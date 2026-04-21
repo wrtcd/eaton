@@ -41,7 +41,7 @@ def main() -> None:
         ("VCD background method", delta_meta["vcd_bg_method"]),
         ("f_p epsilon", delta_meta["fp_eps"]),
         ("f_p low fallback", delta_meta["fp_low_fallback"]),
-        ("VCD_check / input path", delta_meta["vcd_adj_path"]),
+        ("VCD input path", delta_meta.get("vcd_path") or delta_meta.get("vcd_adj_path", "")),
         ("f_p raster path", delta_meta["fp_path"]),
     ]
     df_delta = pd.DataFrame(rows_delta, columns=["Parameter", "Value"])
